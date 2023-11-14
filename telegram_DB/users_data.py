@@ -1,11 +1,12 @@
 import sqlite3
 
-way_to_database = "users_data.db"
+way_to_database = "telegram_DB/users_data.db"
 
 
 def create_table():
+    """Содаёт чистенькую БД"""
     with sqlite3.connect(way_to_database) as data_base:
-        data_base.execute("CREATE TABLE users (telegram_user_id INTEGER, snils TEXT, fio TEXT)")
+        data_base.execute("CREATE TABLE users (telegram_user_id INTEGER, snils TEXT, name TEXT, surname TEXT, patronymic TEXT)")
         data_base.execute("CREATE TABLE universities (name TEXT, url TEXT)")
         data_base.execute("CREATE TABLE faculties (university_id INTEGER, name TEXT, url TEXT)")
         sql = """
@@ -26,12 +27,15 @@ def create_table():
 
 
 def open_database():
+    """
+    :return: Файл БД
+    """
     database = sqlite3.connect(way_to_database)
     return database
 
 
 def add_user(database, user_data: list):
-    """users_data: [(id, snils, fio),
+    """users_data: [(id, snils, name, surname, patronymic),
     [0, selected_university1, selected_university2, ... , selected_university5],
     [0, selected_faculty1, selected_faculty2, ... , selected_faculty25]]"""
     cursor = database.cursor()
