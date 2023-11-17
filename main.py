@@ -1,25 +1,23 @@
-import telegram_DB.users_data as db
-from files.token import TOKEN
+from files.config import TOKEN
+import files.text_for_answer as a_text
+import bot_files.keyboards as kb
+
 
 import asyncio
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
-from aiogram.enums.dice_emoji import DiceEmoji
-from aiogram.filters import Command, CommandStart, CommandObject
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
+from aiogram.filters import Command
 
-
-from random import randint
-import keyboards
 
 bot = Bot(token=TOKEN, parse_mode="HTML")
 dp = Dispatcher()
 
 
-
-@dp.message(CommandStart())
+@dp.message(Command('start'))
 async def start(message: Message):
-    await message.answer(f'Hello, {message.from_user.first_name}', reply_markup=keyboards.main_kb)
-
+    await message.answer(a_text.start_text, reply_markup=kb.start_question_keyboard())
 
 # @dp.message(Command(commands=['rn', 'random_number']))
 # async def random_number(message: Message, command: CommandObject):
@@ -33,19 +31,122 @@ async def start(message: Message):
 #     x = await message.answer_dice(DiceEmoji.DICE)
 #     print(x.dice.value)
 
+class States(StatesGroup):
+    name = State()
+    surname = State()
+    patronymic = State()
+    snils = State()
+    u1 = State()
+    u2 = State()
+    u3 = State()
+    u4 = State()
+    u5 = State()
+    aoe1 = State()
+    aoe2 = State()
+    aoe3 = State()
+    aoe4 = State()
+    aoe5 = State()
+    aoe6 = State()
+    aoe7 = State()
+    aoe8 = State()
+    aoe9 = State()
+    aoe10 = State()
+    aoe11 = State()
+    aoe12 = State()
+    aoe13 = State()
+    aoe14 = State()
+    aoe15 = State()
+    aoe16 = State()
+    aoe17 = State()
+    aoe18 = State()
+    aoe19 = State()
+    aoe20 = State()
+    aoe21 = State()
+    aoe22 = State()
+    aoe23 = State()
+    aoe24 = State()
+    aoe25 = State()
+
+
+@dp.message(F.text == 'уже подал')
+async def get_name(message: Message, state: FSMContext):
+    await message.answer(text=a_text.start_test_question1_answer_1_message1)
+    await message.answer(text=a_text.start_test_question1_answer_1_message2)
+    await message.answer(text=a_text.start_test_question1_answer_1_message3)
+    await message.answer(text=a_text.start_registration)
+    await message.answer(text=a_text.start_registration_question1)
+    await state.set_state(States.name)
+
+
+@dp.message(States.name)
+async def get_surname(message: Message, state: FSMContext):
+    await state.update_data(name=message.text)
+    await message.answer(text=a_text.start_registration_question2)
+    await state.set_state(States.surname)
+
+#   data = await state.get_data()
+#   await state.clear()
+
+
+@dp.message(States.surname)
+async def get_patronymic(message: Message, state: FSMContext):
+    await state.update_data(surname=message.text)
+    await message.answer(text=a_text.start_registration_question4)
+    await state.set_state(States.patronymic)
+
+
+@dp.message(States.patronymic)
+async def get_patronymic(message: Message, state: FSMContext):
+    await state.update_data(patronymic=message.text)
+    await message.answer(text=a_text.start_registration_question4)
+    await state.set_state(States.snils)
+
+
+def check_snils(snils: str):
+    try:
+        if len(snils) != 14:
+            if (snils[3] == '-') and (snils[7] == '-') and (snils[11] == ' '):
+                snils = snils.replace('-', '')
+                snils = snils.replace(' ', '')
+                if len(snils) == 11:
+                    int(snils)
+                    return True
+                else:
+                    return False
+            else:
+                return False
+        else:
+            return False
+    except:
+        return False
+
+
+@dp.message(States.snils)
+async def get_snils(message: Message, state: FSMContext):
+    if check_snils(message.text):
+        await state.update_data(snils=message.text)
+        await message.answer(text=a_text.start_registration_question4)
+        await state.set_state(States.u1)
+    else:
+        await message.answer(text=a_text.start_registration_question4_error)
+        await state.set_state(States.snils)
+
+
+@dp.message(States.u1)
+async def get_u1(message: Message, state: FSMContext):
+    await state.update_data(u1=message.text)
+    data = await state.get_data()
+    print(data)
+    await message.answer(text=a_text.start_registration_question4)
+    await state.set_state(States.u2)
+
 
 @dp.message()
 async def echo(message: Message):
     msg = message.text.lower()
-
     if msg == 'urls':
-        await message.answer('This is your urls:', reply_markup=keyboards.links_kb)
-    elif msg == 'special buttons':
-        await message.answer('special buttons', reply_markup=keyboards.spec_kb)
-    elif msg == 'calc':
-        await message.answer('calc', reply_markup=keyboards.calc_kb())
-    elif (msg == 'f') or (msg == 'b'):
-        await message.answer(reply_markup=keyboards.calc_kb())
+        pass
+        # await message.answer('This is your urls:', reply_markup=keyboards.links_kb)
     else:
         await message.answer('Unknown command(')
 
@@ -56,5 +157,8 @@ async def main():
 
 
 if __name__ == '__main__':
-    print('On ready')
-    asyncio.run(main())
+    try:
+        print('On ready')
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print('Bot has been stop')

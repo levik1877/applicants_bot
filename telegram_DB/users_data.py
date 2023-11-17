@@ -7,21 +7,23 @@ def create_table():
     """Содаёт чистенькую БД"""
     with sqlite3.connect(way_to_database) as data_base:
         data_base.execute("CREATE TABLE users (telegram_user_id INTEGER, snils TEXT, name TEXT, surname TEXT, patronymic TEXT)")
-        data_base.execute("CREATE TABLE universities (name TEXT, url TEXT)")
-        data_base.execute("CREATE TABLE faculties (university_id INTEGER, name TEXT, url TEXT)")
+        data_base.execute("CREATE TABLE universities (name TEXT, faculties TEXT, city: INTEGER)")
+        data_base.execute("CREATE TABLE cities (name TEXT)")
+        data_base.execute("CREATE TABLE faculties (name TEXT)")
+        data_base.execute("CREATE TABLE areas_of_education (university_id INTEGER, faculty_id INTEGER, name TEXT, description: TEXT)")
         sql = """
-        CREATE TABLE selected_faculties (user_id INTEGER, 
-        f1 INTEGER, f2 INTEGER, f3 INTEGER, f4 INTEGER, f5 INTEGER, 
-        f6 INTEGER, f7 INTEGER, f8 INTEGER, f9 INTEGER, f10 INTEGER, 
-        f11 INTEGER, f12 INTEGER, f13 INTEGER, f14 INTEGER, f15 INTEGER, 
-        f16 INTEGER, f17 INTEGER, f18 INTEGER, f19 INTEGER, f20 INTEGER, 
-        f21 INTEGER, f22 INTEGER, f23 INTEGER, f24 INTEGER, f25 INTEGER)
-        """
+            CREATE TABLE selected_areas_of_education (user_id INTEGER, 
+            aoe1 INTEGER, aoe2 INTEGER, aoe3 INTEGER, aoe4 INTEGER, aoe5 INTEGER, 
+            aoe6 INTEGER, aoe7 INTEGER, aoe8 INTEGER, aoe9 INTEGER, aoe10 INTEGER, 
+            aoe11 INTEGER, aoe12 INTEGER, aoe13 INTEGER, aoe14 INTEGER, aoe15 INTEGER, 
+            aoe16 INTEGER, aoe17 INTEGER, aoe18 INTEGER, aoe19 INTEGER, aoe20 INTEGER, 
+            aoe21 INTEGER, aoe22 INTEGER, aoe23 INTEGER, aoe24 INTEGER, aoe25 INTEGER)
+            """
         data_base.execute(sql)
         sql = """
-        CREATE TABLE selected_universities (user_id int, 
-        u1 INTEGER,  u2 INTEGER,  u3 INTEGER,  u4 INTEGER,  u5 INTEGER)
-        """
+            CREATE TABLE selected_universities (user_id int, 
+            u1 INTEGER,  u2 INTEGER,  u3 INTEGER,  u4 INTEGER,  u5 INTEGER)
+            """
         data_base.execute(sql)
         data_base.commit()
 
@@ -34,128 +36,129 @@ def open_database():
     return database
 
 
-def add_user(database, user_data: list):
-    """users_data: [(id, snils, name, surname, patronymic),
-    [0, selected_university1, selected_university2, ... , selected_university5],
-    [0, selected_faculty1, selected_faculty2, ... , selected_faculty25]]"""
+def add_user(database, user_telegram_id: int, user_snils: str, user_name: str, user_surname: str, user_patronymic: str, selected_universities: list, selected_areas_of_education: list):
+    """
+    :param database:
+    :param user_telegram_id:
+    :param user_snils:
+    :param user_name:
+    :param user_surname:
+    :param user_patronymic:
+    :param selected_universities: [0, selected_university1, selected_university2, ... , selected_university5]
+    :param selected_areas_of_education: [0, selected_area_of_education1, selected_area_of_education2, ... , selected_area_of_education25]
+    """
     cursor = database.cursor()
-    cursor.execute(f"INSERT INTO users VALUES {user_data[0]}")
-    cursor.execute(f"SELECT rowid FROM users WHERE telegram_user_id = {user_data[0][0]}")
+    cursor.execute(f"INSERT INTO users VALUES {(user_telegram_id, user_snils, user_name, user_surname, user_patronymic)}")
+    cursor.execute(f"SELECT rowid FROM users WHERE telegram_user_id = {user_telegram_id}")
     db_user_id = cursor.fetchone()[0]
-    selected_universities = user_data[1]
     selected_universities[0] = db_user_id
     cursor.execute(f"INSERT INTO selected_universities VALUES {tuple(selected_universities)}")
-    selected_faculties = user_data[2]
-    selected_faculties[0] = db_user_id
-    cursor.execute(f"INSERT INTO selected_faculties VALUES {tuple(selected_faculties)}")
+    selected_areas_of_education[0] = db_user_id
+    cursor.execute(f"INSERT INTO selected_areas_of_education VALUES {tuple(selected_areas_of_education)}")
 
 
 def get_user(detabase, user_id: int):
     cursor = detabase.cursor()
     user_snils_fio = cursor.execute(f"SELECT * FROM users WHERE telegram_user_id = {user_id}")
     sql = f"""
-    SELECT * FROM selected_universities 
-    JOIN users 
-    WHERE (selected_universities.user_id = users.rowid) AND (telegram_user_id = {user_id})
-    """
+        SELECT * FROM selected_universities 
+        JOIN users 
+        WHERE (selected_universities.user_id = users.rowid) AND (telegram_user_id = {user_id})
+        """
     user_selected_universities = cursor.execute(sql)
     sql = f"""
-    SELECT * FROM selected_faculties 
-    JOIN users 
-    WHERE (selected_faculties.user_id = users.rowid) AND (telegram_user_id = {user_id})
-    """
-    user_selected_faculties = cursor.execute(sql)
-    user_information = [user_snils_fio, user_selected_universities, user_selected_faculties]
+        SELECT * FROM selected_areas_of_education 
+        JOIN users 
+        WHERE (selected_areas_of_education.user_id = users.rowid) AND (telegram_user_id = {user_id})
+        """
+    user_selected_areas_of_education = cursor.execute(sql)
     user_info = []
-    for i in range(len(user_information)):
-        for j in range(len(user_information[i])):
-            user_info.append(user_information[i][j])
+    [user_info.append(i) for i in user_snils_fio]
+    user_info.append(user_selected_universities)
+    user_info.append(user_selected_areas_of_education)
     return user_info
 
 
-def edit_user(database, user_id: int, change_params: tuple, new_data):
-    """
-    :param database:
-    :param user_id:
-    :param change_params: (change_pattern, column(для 3,4))
-    :param new_data:
-
-    1 - изменить СНИЛС
-    2 - изменить ФИО
-    3 - выбрать университет
-    4 - выбрать факультет
-
-    """
+def edit_user_snils(database, user_telegram_id: int, new_snils: str):
     cursor = database.cursor()
+    cursor.execute(f"UPDATE users SET snils = '{new_snils}' WHERE telegram_user_id = {user_telegram_id}")
 
-    match change_params[0]:
-        case 1:
-            cursor.execute(f"UPDATE users SET snils = '{new_data}' WHERE telegram_user_id = {user_id}")
-        case 2:
-            cursor.execute(f"UPDATE users SET fio = '{new_data}' WHERE telegram_user_id = {user_id}")
-        case 3:
-            sql = f"""
-            UPDATE selected_universities 
-            SET {change_params[1]} = {new_data} 
-            WHERE user_id = (SELECT rowid FROM users WHERE telegram_user_id = {user_id})
-            """
-            cursor.execute(sql)
-        case 4:
-            sql = f"""
-            UPDATE selected_faculties 
-            SET {change_params[1]} = {new_data} 
-            WHERE user_id = (SELECT rowid FROM users WHERE telegram_user_id = {user_id})
-            """
-            cursor.execute(sql)
+
+def edit_user_fio(database, user_telegram_id: int, new_fio: tuple):
+    cursor = database.cursor()
+    cursor.execute(f"UPDATE users SET name = '{new_fio[0]}' WHERE telegram_user_id = {user_telegram_id}")
+    cursor.execute(f"UPDATE users SET surname = '{new_fio[1]}' WHERE telegram_user_id = {user_telegram_id}")
+    cursor.execute(f"UPDATE users SET patronymic = '{new_fio[2]}' WHERE telegram_user_id = {user_telegram_id}")
+
+
+def edit_user_selected_university(database, user_telegram_id: int, selected_university_number: int, new_selected_university_name: str):
+    cursor = database.cursor()
+    sql = f"""
+        UPDATE selected_universities 
+        SET u{selected_university_number} = (SELECT rowid FROM universities WHERE name = '{new_selected_university_name}') 
+        WHERE user_id = (SELECT rowid FROM users WHERE telegram_user_id = {user_telegram_id})
+        """
+    cursor.execute(sql)
+
+
+def edit_user_selected_areas_of_education(database, user_telegram_id: int, selected_area_of_education_number: int, new_selected_area_of_education_name: str):
+    cursor = database.cursor()
+    sql = f"""
+        UPDATE selected_areas_of_education 
+        SET aoe{selected_area_of_education_number} = (SELECT rowid FROM areas_of_education_number WHERE name = '{new_selected_area_of_education_name}')  
+        WHERE user_id = (SELECT rowid FROM users WHERE telegram_user_id = {user_telegram_id})
+        """
+    cursor.execute(sql)
 
 
 def check_user(database, user_id: int):
     cursor = database.cursor()
     cursor.execute(f"SELECT rowid FROM users WHERE telegram_user_id = {user_id}")
-    if cursor.fetchone() == None:
+    if cursor.fetchone() is None:
         return False
     else:
         return True
 
 
-def add_university(database, university_data: tuple):
+def add_university(database, university_data: list):
     """
     :param database:
-    :param university_data: (название университета, ссылка на списки поступающих)
+    :param university_data: [название университета, [id факультетов], город]
     """
     cursor = database.cursor()
+    # ДОДЕЛАТЬ! нужно продумать как хранить информацию о факультетах в университете
     cursor.execute(f"INSERT INTO universities VALUES {university_data}")
 
 
-def add_faculty(database, faculty_data: tuple, university_name: str):
+def add_area_of_education(database, area_of_education_data: tuple, university_name: str):
     """
     :param database:
-    :param faculty_data: (название факультета, ссылка на таблицу поступающих)
+    :param area_of_education_data: (код направления подготовки, название факультета, описание направления подготовки)
     :param university_name:
     """
     cursor = database.cursor()
     cursor.execute(f"SELECT rowid FROM universities WHERE name = '{university_name}'")
     university_id = cursor.fetchone()[0]
-    cursor.execute(f"INSERT INTO faculties VALUES ({university_id}, '{faculty_data[0]}', '{faculty_data[1]}')")
+    cursor.execute(f"INSERT INTO areas_of_education VALUES ({university_id}, '{area_of_education_data[0]}', '{area_of_education_data[1]}', '{area_of_education_data[2]}')")
 
 
-def edit_url(database, change_params: tuple, new_url):
-    """
-    :param database:
-    :param change_params: (что меняем универ или факультет, Имя университета, Имя факультета)
-    1 - универ
-    2 - факультет
-    :param new_url:
-    """
+def get_universities(database):
     cursor = database.cursor()
-    match change_params[0]:
-        case 1:
-            cursor.execute(f"UPDATE universities WHERE name = '{change_params[1]}' SET url = '{new_url}'")
-        case 2:
-            sql = f"""
-                UPDATE faculties 
-                SET url = '{new_url}'
-                WHERE (name = '{change_params[2]}')  
-                AND (university_id = (SELECT rowid FROM universities WHERE name = '{change_params[1]}'))
-                """
-            cursor.execute(sql)
+    return cursor.execute("SELECT * FROM universities").fetchall()
+
+
+def get_faculties(database):
+    cursor = database.cursor()
+    return cursor.execute("SELECT * FROM faculties").fetchall()
+
+
+def get_areas_of_education(database, university_name: str, faculty_name: str):
+    cursor = database.cursor()
+    sql = f"""
+    SELECT * 
+    FROM areas_of_education 
+    WHERE (university_id = (SELECT rowid FROM universities WHERE name = '{university_name}')) 
+    AND (faculty_id = (SELECT rowid FROM faculties WHERE name = '{faculty_name}'))
+    """
+    cursor.execute(sql)
+

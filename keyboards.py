@@ -54,12 +54,15 @@ spec_kb = ReplyKeyboardMarkup(
 
 from random import randint
 # В кнопку влазяет не более 88 символов !!!!!!!!!!!!!!!!!!!!!
+
+
 def calc_kb():
     builder = ReplyKeyboardBuilder()
     for i in range(98):
         builder.button(text=f'{randint(0, 99)}.{randint(0, 99)}.{randint(0, 99)} 1234567890123456789012345678901234567890123456789012345678901234567890123456789')
     builder.button(text='b')
     builder.button(text='f')
+    builder.button()
     a = [1]*98
     builder.adjust(*a, 2)
 
