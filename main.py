@@ -8,7 +8,7 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.filters import Command
+from aiogram.filters import Command, CommandObject
 
 
 bot = Bot(token=TOKEN, parse_mode="HTML")
@@ -91,7 +91,7 @@ async def get_surname(message: Message, state: FSMContext):
 @dp.message(States.surname)
 async def get_patronymic(message: Message, state: FSMContext):
     await state.update_data(surname=message.text)
-    await message.answer(text=a_text.start_registration_question4)
+    await message.answer(text=a_text.start_registration_question3)
     await state.set_state(States.patronymic)
 
 
@@ -104,7 +104,7 @@ async def get_patronymic(message: Message, state: FSMContext):
 
 def check_snils(snils: str):
     try:
-        if len(snils) != 14:
+        if len(snils) == 14:
             if (snils[3] == '-') and (snils[7] == '-') and (snils[11] == ' '):
                 snils = snils.replace('-', '')
                 snils = snils.replace(' ', '')
