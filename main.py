@@ -1,7 +1,7 @@
 from files.config import TOKEN
 import files.text_for_answer as a_text
 import bot_files.keyboards as kb
-
+import telegram_DB.users_data as db
 
 import asyncio
 from aiogram import Bot, Dispatcher, F
@@ -14,6 +14,13 @@ from aiogram.filters import Command, CommandObject
 bot = Bot(token=TOKEN, parse_mode="HTML")
 dp = Dispatcher()
 
+database = db.open_database()
+import time
+s = ['Ростов-на-Дону', 'Москва', 'Краснодар', 'Сочи', 'Екатеринбург']
+for i in range(len(s)):
+    db.add_cities(database, s[i])
+    time.sleep(1)
+cities = db.get_cities(database)
 
 @dp.message(Command('start'))
 async def start(message: Message):
@@ -36,11 +43,17 @@ class States(StatesGroup):
     surname = State()
     patronymic = State()
     snils = State()
+    answer = State()
     u1 = State()
     u2 = State()
     u3 = State()
     u4 = State()
     u5 = State()
+    city_u1 = State()
+    city_u2 = State()
+    city_u3 = State()
+    city_u4 = State()
+    city_u5 = State()
     aoe1 = State()
     aoe2 = State()
     aoe3 = State()
@@ -73,6 +86,7 @@ async def get_name(message: Message, state: FSMContext):
     await message.answer(text=a_text.start_test_question1_answer_1_message1)
     await message.answer(text=a_text.start_test_question1_answer_1_message2)
     await message.answer(text=a_text.start_test_question1_answer_1_message3)
+    await message.answer(text=a_text.consent_to_the_processing_of_personal_data)
     await message.answer(text=a_text.start_registration)
     await message.answer(text=a_text.start_registration_question1)
     await state.set_state(States.name)
@@ -125,20 +139,33 @@ def check_snils(snils: str):
 async def get_snils(message: Message, state: FSMContext):
     if check_snils(message.text):
         await state.update_data(snils=message.text)
-        await message.answer(text=a_text.start_registration_question4)
-        await state.set_state(States.u1)
+        data = await state.get_data()
+        text = a_text.start_registration_final_review + f"Имя: {data['name']}\nФамилия: {data['surname']}\nОтчество: {data['patronymic']}\nСНИЛС: {data['snils']}"
+        await message.answer(text=text, reply_markup=kb.review_start_form())
+        await state.set_state(States.answer)
     else:
         await message.answer(text=a_text.start_registration_question4_error)
         await state.set_state(States.snils)
 
 
-@dp.message(States.u1)
+@dp.message(States.answer)
+async def get_answer(message: Message, state: FSMContext):
+    if message.text == "все верно":
+        await message.answer(text=a_text.choice_universities_header)
+        await message.answer(text=a_text.choice_first_university_city, reply_markup=kb.cities())
+        await state.set_state(States.city_u1)
+    elif message.text == "заполнить заново":
+        await state.clear()
+        await message.answer(text=a_text.start_registration_question1)
+        await state.set_state(States.name)
+
+
+@dp.message(States.city_u1)
 async def get_u1(message: Message, state: FSMContext):
-    await state.update_data(u1=message.text)
-    data = await state.get_data()
-    print(data)
-    await message.answer(text=a_text.start_registration_question4)
-    await state.set_state(States.u2)
+    await state.update_data(city_u1=message.text)
+    await message.answer(text=a_text.choice_first_university)
+    await state.set_state(States.u1)
+
 
 
 @dp.message()

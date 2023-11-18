@@ -1,16 +1,16 @@
 import sqlite3
 
-way_to_database = "telegram_DB/users_data.db"
+way_to_database = r"C:\Users\levvo\Desktop\applicants_bot\telegram_DB\users_data.db"
 
 
 def create_table():
     """Содаёт чистенькую БД"""
     with sqlite3.connect(way_to_database) as data_base:
         data_base.execute("CREATE TABLE users (telegram_user_id INTEGER, snils TEXT, name TEXT, surname TEXT, patronymic TEXT)")
-        data_base.execute("CREATE TABLE universities (name TEXT, faculties TEXT, city: INTEGER)")
+        data_base.execute("CREATE TABLE universities (name TEXT, faculties TEXT, city_id INTEGER)")
         data_base.execute("CREATE TABLE cities (name TEXT)")
         data_base.execute("CREATE TABLE faculties (name TEXT)")
-        data_base.execute("CREATE TABLE areas_of_education (university_id INTEGER, faculty_id INTEGER, name TEXT, description: TEXT)")
+        data_base.execute("CREATE TABLE areas_of_education (university_id INTEGER, faculty_id INTEGER, name TEXT, description TEXT)")
         sql = """
             CREATE TABLE selected_areas_of_education (user_id INTEGER, 
             aoe1 INTEGER, aoe2 INTEGER, aoe3 INTEGER, aoe4 INTEGER, aoe5 INTEGER, 
@@ -55,6 +55,7 @@ def add_user(database, user_telegram_id: int, user_snils: str, user_name: str, u
     cursor.execute(f"INSERT INTO selected_universities VALUES {tuple(selected_universities)}")
     selected_areas_of_education[0] = db_user_id
     cursor.execute(f"INSERT INTO selected_areas_of_education VALUES {tuple(selected_areas_of_education)}")
+    cursor.close()
 
 
 def get_user(detabase, user_id: int):
@@ -76,12 +77,14 @@ def get_user(detabase, user_id: int):
     [user_info.append(i) for i in user_snils_fio]
     user_info.append(user_selected_universities)
     user_info.append(user_selected_areas_of_education)
+    cursor.close()
     return user_info
 
 
 def edit_user_snils(database, user_telegram_id: int, new_snils: str):
     cursor = database.cursor()
     cursor.execute(f"UPDATE users SET snils = '{new_snils}' WHERE telegram_user_id = {user_telegram_id}")
+    cursor.close()
 
 
 def edit_user_fio(database, user_telegram_id: int, new_fio: tuple):
@@ -89,6 +92,7 @@ def edit_user_fio(database, user_telegram_id: int, new_fio: tuple):
     cursor.execute(f"UPDATE users SET name = '{new_fio[0]}' WHERE telegram_user_id = {user_telegram_id}")
     cursor.execute(f"UPDATE users SET surname = '{new_fio[1]}' WHERE telegram_user_id = {user_telegram_id}")
     cursor.execute(f"UPDATE users SET patronymic = '{new_fio[2]}' WHERE telegram_user_id = {user_telegram_id}")
+    cursor.close()
 
 
 def edit_user_selected_university(database, user_telegram_id: int, selected_university_number: int, new_selected_university_name: str):
@@ -99,6 +103,7 @@ def edit_user_selected_university(database, user_telegram_id: int, selected_univ
         WHERE user_id = (SELECT rowid FROM users WHERE telegram_user_id = {user_telegram_id})
         """
     cursor.execute(sql)
+    cursor.close()
 
 
 def edit_user_selected_areas_of_education(database, user_telegram_id: int, selected_area_of_education_number: int, new_selected_area_of_education_name: str):
@@ -109,14 +114,17 @@ def edit_user_selected_areas_of_education(database, user_telegram_id: int, selec
         WHERE user_id = (SELECT rowid FROM users WHERE telegram_user_id = {user_telegram_id})
         """
     cursor.execute(sql)
+    cursor.close()
 
 
 def check_user(database, user_id: int):
     cursor = database.cursor()
     cursor.execute(f"SELECT rowid FROM users WHERE telegram_user_id = {user_id}")
     if cursor.fetchone() is None:
+        cursor.close()
         return False
     else:
+        cursor.close()
         return True
 
 
@@ -128,6 +136,7 @@ def add_university(database, university_data: list):
     cursor = database.cursor()
     # ДОДЕЛАТЬ! нужно продумать как хранить информацию о факультетах в университете
     cursor.execute(f"INSERT INTO universities VALUES {university_data}")
+    cursor.close()
 
 
 def add_area_of_education(database, area_of_education_data: tuple, university_name: str):
@@ -140,16 +149,21 @@ def add_area_of_education(database, area_of_education_data: tuple, university_na
     cursor.execute(f"SELECT rowid FROM universities WHERE name = '{university_name}'")
     university_id = cursor.fetchone()[0]
     cursor.execute(f"INSERT INTO areas_of_education VALUES ({university_id}, '{area_of_education_data[0]}', '{area_of_education_data[1]}', '{area_of_education_data[2]}')")
+    cursor.close()
 
 
-def get_universities(database):
+def get_universities(database, city: str):
     cursor = database.cursor()
-    return cursor.execute("SELECT * FROM universities").fetchall()
+    universities = cursor.execute(f"SELECT * FROM universities WHERE city_id = (SELECT rowid FROM cities WHERE name = '{city}')").fetchall()
+    cursor.close()
+    return universities
 
 
-def get_faculties(database):
+def get_faculties(database): #НЕ ПРАВИЛЬНО переделать чтобы возвращала список факультетв конкретного университета
     cursor = database.cursor()
-    return cursor.execute("SELECT * FROM faculties").fetchall()
+    faculties = cursor.execute("SELECT * FROM faculties").fetchall()
+    cursor.close()
+    return faculties
 
 
 def get_areas_of_education(database, university_name: str, faculty_name: str):
@@ -160,5 +174,20 @@ def get_areas_of_education(database, university_name: str, faculty_name: str):
     WHERE (university_id = (SELECT rowid FROM universities WHERE name = '{university_name}')) 
     AND (faculty_id = (SELECT rowid FROM faculties WHERE name = '{faculty_name}'))
     """
-    cursor.execute(sql)
+    area_of_education = cursor.execute(sql).fetchall()
+    cursor.close()
+    return area_of_education
+
+
+def add_cities(database, city_name: str):
+    cursor = database.cursor()
+    cursor.execute(f"INSERT INTO cities VALUES ('{city_name}')") # чёт не робит
+    cursor.close()
+
+
+def get_cities(database):
+    cursor = database.cursor()
+    cities = cursor.execute("SELECT * FROM cities").fetchall()
+    cursor.close()
+    return cities
 
